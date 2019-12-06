@@ -1153,7 +1153,7 @@ int Edgeswap::growth_host_vecs(
 						//This ensures that the newly created edges will have the correct associated spring constant.
 //std::cout<<"ERROR HERE?"<<std::endl;
 		generalParams.edges_in_upperhem[iedge] = INT_MAX;
-		for (int i = 0; i < generalParams.edges_in_upperhem_list_length; i++){
+		for (int i = 0; i < coordInfoVecs.num_edges; i++){
 			if (generalParams.edges_in_upperhem_list[i] == iedge){
 				generalParams.edges_in_upperhem_list[i] == INT_MAX;
 				//break;
