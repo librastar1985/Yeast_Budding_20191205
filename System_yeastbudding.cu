@@ -55,38 +55,38 @@ void System::Solve_Forces(){
 		coordInfoVecs,
 		linearSpringInfoVecs, 
 		ljInfoVecs);
-	
-	ComputeAreaTriangleSprings(
+	//std::cout<<"where is the error 1?"<<std::endl;
+	/*ComputeAreaTriangleSprings(
 		
 		generalParams,
 		coordInfoVecs,
-		areaTriangleInfoVecs);
+		areaTriangleInfoVecs);*/
 
 	ComputeTurgorSprings(
 		generalParams,
 		coordInfoVecs,
 		areaTriangleInfoVecs
 	);
-
-	ComputeCosTriangleSprings(
+	//std::cout<<"where is the error 2?"<<std::endl;
+	 ComputeCosTriangleSprings(
 		
 		generalParams,
 		coordInfoVecs,  
 		bendingTriangleInfoVecs); 
-	
+		//std::cout<<"where is the error 3?"<<std::endl;
 	ComputeMemRepulsionSprings(
 		coordInfoVecs,
 		linearSpringInfoVecs, 
 		capsidInfoVecs,
 		generalParams,
-		auxVecs);
-
+		auxVecs); 
+		//std::cout<<"where is the error 4?"<<std::endl;
 	ComputeVolume(
 		generalParams,
 		coordInfoVecs,
 		linearSpringInfoVecs,
 		ljInfoVecs);
-
+		//std::cout<<"where is the error 5?"<<std::endl;
 
 	/*ComputeVolumeSprings(
 		coordInfoVecs,
@@ -107,10 +107,10 @@ void System::Solve_Forces(){
 
 void System::solveSystem() {
 
-	double MAX_VOLUME_RATIO = 1.5;
+	double MAX_VOLUME_RATIO = 50.0;
 
 	generalParams.kT_growth = 1.0;
-	generalParams.SCALE_TYPE = 4; 
+	generalParams.SCALE_TYPE = 3; 
 	// 0:= Gaussian-like weakening
 	// 1:= a1*(pow(x,b)) + a2*(1-pow(x,b)) type weakening
 	// 2:= pure Gaussian weakening
@@ -124,22 +124,23 @@ void System::solveSystem() {
 	generalParams.gausssigma = 0.1;
 	std::cout<<"gausssigma (this is for the SCALE_TYPE = 0 case) = "<<generalParams.gausssigma<<std::endl;
 	//coordInfoVecs.scaling_per_edge.
-	//generalParams.hilleqnconst = 0.9;
-	//generalParams.hilleqnpow = 40.0;
+	generalParams.hilleqnconst = 0.9;
+	generalParams.hilleqnpow = 70.0;
+	std::cout<<"hill equation constant K = "<<generalParams.hilleqnconst<<std::endl;
+	std::cout<<"hill (equation) coefficient = "<<generalParams.hilleqnpow<<std::endl;
 	std::vector<int> nodes_in_growth;
 	std::vector<int> triangles_in_growth;
 	std::vector<int> edges_in_growth;
 	double dtb; //dtb := distance to boundary
-	double dtb_max; //dtb_max := the max distance used to calculate the distance ratio in the Hill equation.
-	double sigma = 1.0;//INT_MAX; if this is set to be INT_MAX then we assume isotropic weakening.
+	double sigma = INT_MAX; //if this is set to be INT_MAX then we assume isotropic weakening.
 	double sigma_true = sqrt(0.5); //This is the variance used to calculate the scaling of the wall weakening.
 	std::cout<<"initial sigma (for gradient distribution variance), based on initial distribution of Cdc42, if using true gaussian weakening = "<<sigma<<std::endl;
 	std::cout<<"If sigma = INT_MAX, then we have isotropic weakening scenario"<<std::endl;
 	std::cout<<"true sigma (for gaussian-related distribution variance) = "<<sigma_true<<std::endl;
 
-	generalParams.insertion_energy_cost = -log(0.0025);
+	generalParams.insertion_energy_cost = 10000.0;//-log(0.0025);
 	std::cout<<"GROWTH: material insertion energy cost (dependent on local chemical concentration) = "<<generalParams.insertion_energy_cost<<std::endl;
-	generalParams.strain_threshold = 0.4;
+	generalParams.strain_threshold = 10000.0;
 	std::cout<<"GROWTH: critical strain threshold used for insertion probability calculation = "<<generalParams.strain_threshold<<std::endl;
 
 	generalParams.growth_energy_scaling = 1.0;//0.01375;
@@ -310,14 +311,14 @@ void System::solveSystem() {
 
 	generalParams.volume_spring_constant = 0.2;//(1.0/3.0)*areaTriangleInfoVecs.initial_area*1.0;
 	std::cout<<"spring constant for surface normal expansion (pressure within the cell) = "<<generalParams.volume_spring_constant<<std::endl;
-	generalParams.line_tension_constant = 50.0;//250.0;
+	generalParams.line_tension_constant = 0.0;//250.0;
 	std::cout<<"spring constant for the septin ring = "<<generalParams.line_tension_constant<<std::endl;
 	generalParams.length_scale = 1.0;//0.85;//0.1577;//1.0*generalParams.Rmin;// 0.8333;
 	//std::cout<<"equilibrium length of each segment of the septin ring = "<<generalParams.length_scale<<std::endl;
 
-	double scale_linear = linearSpringInfoVecs.spring_constant*1.0;//0.25;//25.0/2.5;//75.0/15.0;
-	double scale_bend = bendingTriangleInfoVecs.spring_constant*0.1;//0.05;//10.0/1.0;//75.0/7.5;
-	double scale_area = areaTriangleInfoVecs.spring_constant*1.0;//0.25;//50.0/5.0;//75.0/15.0;
+	double scale_linear = linearSpringInfoVecs.spring_constant*1.0;//0.44;//0.25;//25.0/2.5;//75.0/15.0;
+	double scale_bend = bendingTriangleInfoVecs.spring_constant*1.0;//0.25;//0.05;//10.0/1.0;//75.0/7.5;
+	double scale_area = areaTriangleInfoVecs.spring_constant*0.0;//0.25;//50.0/5.0;//75.0/15.0;
 	std::cout<<"weakened region linear = "<<scale_linear<<std::endl;
 	std::cout<<"weakened region bend = "<<scale_bend<<std::endl;
 	std::cout<<"weakened region area = "<<scale_area<<std::endl;
@@ -677,9 +678,8 @@ void System::solveSystem() {
 	//////////////////////////////////////////////////////////////////////////////////////
 
 	/* Build the initial gradient weakend scale */
+	//std::cout<<"max_height_index = "<<max_height_index<<std::endl;
 	dtb = 0.0;//dtb := distance to boundary
-	generalParams.septin_ring_z = 0.0;
-	generalParams.boundary_z = 0.0;
 	//for (int k = 0; k < boundary_edge_list.size(); k++){
 	for (int k = 0; k < boundary_node_list.size(); k++){
 		double n1 = boundary_node_list[k];//coordInfoVecs.edges2Nodes_1[boundary_edge_list[k]];
@@ -690,46 +690,19 @@ void System::solveSystem() {
 		double dist_x = coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1];//cent_of_edge_x;
 		double dist_y = coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1];//cent_of_edge_y;
 		double dist_z = coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1];//cent_of_edge_z;
-		double temp_dist = sqrt((coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1])*(coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1]) +
-		(coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1])*(coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1]) +
-			(coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1])*(coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1]));
-		generalParams.septin_ring_z += coordInfoVecs.nodeLocZ[n1];
-		if (temp_dist >= dtb){
-			dtb = temp_dist;
-			/* "dtb" will be used to identify where the septin ring is located, and used to determine the Hill coefficient*/
-		}
+		dtb += sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
 	}
-	std::cout<<"dtb = "<<dtb<<std::endl;
-	//generalParams.septin_ring_z = generalParams.septin_ring_z/boundary_node_list.size();
-	//generalParams.boundary_z = generalParams.septin_ring_z - generalParams.Rmin;
-	/* dtb will be only calculated once so we can effectively keep the Hill eqn curve consistent with only horizontal shift */
-	dtb_max = dtb + (generalParams.Rmin);
-	
+	//dtb = /*(generalParams.Rmin/2.0) +*/ dtb/(boundary_edge_list.size());
+	dtb = (generalParams.Rmin/2.0) + dtb/(boundary_node_list.size());
 	std::cout<<"initial distance between cell tip and the boundary of weakened area = "<<dtb<<std::endl;
 	std::cout<<"Notice that here, the distance from the tip to the boundary is slightly extended by half of the equilibrium length of an edge"<<std::endl;
 	//std::cout<<"If this message is present, we are forcing a fixed portion of the bud tip to be occupied by the max concentration"<<std::endl;
-	generalParams.hilleqnconst = (dtb + generalParams.Rmin/4.0)/dtb_max;
-	//generalParams.hilleqnconst = dtb/dtb_max;
-	generalParams.hilleqnpow = 17.0;
-	std::cout<<"hill equation constant K = "<<generalParams.hilleqnconst<<std::endl;
-	std::cout<<"hill (equation) coefficient = "<<generalParams.hilleqnpow<<std::endl;
-	std::cout<<"NOTE: IN THIS SIMULATION, THE LOCATION WHERE 50% WEAKENING IS EXPERIENCED IS LOCATED SLIGHTLY AWAY FROM THE SEPTIN RING, "<<std::endl;
-	std::cout<<"THIS IS DUE TO THE FACT THAT IN ISOTROPIC CASE, SEPTIN RING LOCATION MUST BE SUFFICIENTLY WEAKENED TO INDUCE BUDDING"<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-	std::cout<<" "<<std::endl;
-
-
+	
+	
 	edgeswap_ptr->transferDtoH(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);
 	edgeswap_ptr->gradient_weakening_update_host_vecs(sigma,
 		max_height_index,
 		dtb,
-		dtb_max,
 		generalParams,
 		coordInfoVecs,
 		build_ptr->hostSetInfoVecs);
@@ -858,13 +831,13 @@ void System::solveSystem() {
 					generalParams,
 					auxVecs
 				);*/
-				/*for (int u = 0; u < generalParams.maxNodeCount; u++){
-					int GAMMA = edgeswap_ptr->surfaceNormal_device_vecs(
-						u,
-						coordInfoVecs,
-						generalParams
-					);
-				}*/
+				// for (int u = 0; u < generalParams.maxNodeCount; u++){
+				// 	int GAMMA = edgeswap_ptr->surfaceNormal_device_vecs(
+				// 		u,
+				// 		coordInfoVecs,
+				// 		generalParams
+				// 	);
+				// }
 				AdvancePositions(
 					coordInfoVecs,
 					generalParams,
@@ -1034,6 +1007,10 @@ void System::solveSystem() {
 						 translate_counter += 1;
 						 //std::cout<<"STOPPED BEFORE Solve_Forces"<<std::endl;
 						 Solve_Forces();
+						//for (int k = 0; k < generalParams.maxNodeCount;k++){
+						//	double turgor_mag = sqrt(coordInfoVecs.nodeForceX[k]*coordInfoVecs.nodeForceX[k] + coordInfoVecs.nodeForceY[k]*coordInfoVecs.nodeForceY[k] +coordInfoVecs.nodeForceZ[k]*coordInfoVecs.nodeForceZ[k]);
+						//	std::cout<<"turgor force = "<<turgor_mag<<std::endl;
+						//}
 						 //if (generalParams.true_current_total_volume/initial_volume >= LINE_TENSION_THRESHOLD){
 						if (LINE_TENSION_START >= 1){
 							ComputeLineTensionSprings(
@@ -1049,7 +1026,7 @@ void System::solveSystem() {
  							capsidInfoVecs,
  							generalParams,
 							 auxVecs);
-					if ((generalParams.true_current_total_volume/initial_volume) < 0.6 || generalParams.true_current_total_volume/initial_volume >= 1.20){
+					if ((generalParams.true_current_total_volume/initial_volume) < 0.6 || generalParams.true_current_total_volume/initial_volume >= MAX_VOLUME_RATIO){
 						generalParams.true_num_edges = 0;
 						for (int i = 0; i < coordInfoVecs.num_edges; i++){
 							if (coordInfoVecs.edges2Nodes_1[i] != INT_MAX && coordInfoVecs.edges2Nodes_2[i] != INT_MAX){
@@ -1058,12 +1035,12 @@ void System::solveSystem() {
 						}
 						storage-> print_VTK_File();
 						storage-> storeVariables();
-						runSim = false;
+						//runSim = false;
 						initial_kT = -0.00000000000000001;
 						if (generalParams.true_current_total_volume/initial_volume < 0.6){
 							std::cout<<"Cell over compression 60%"<<std::endl;
 						}
-						else if (generalParams.true_current_total_volume/initial_volume >= 1.50){
+						else if (generalParams.true_current_total_volume/initial_volume >= MAX_VOLUME_RATIO){
 							std::cout<<"Target volume ratio exceeded. Current volume ratio = "<<generalParams.true_current_total_volume/initial_volume<<std::endl;
 						}
 
@@ -1096,13 +1073,13 @@ void System::solveSystem() {
 						  
 						//  std::cout<<"STOPPED BEFORE surfacenormal"<<std::endl;
 						//std::cout<<"IS IT ADVANCE POSITION PROBLEM?"<<std::endl;
-						/*for (int u = 0; u < generalParams.maxNodeCount; u++){
-							int GAMMA = edgeswap_ptr->surfaceNormal_device_vecs(
-								u,
-								coordInfoVecs,
-								generalParams
-							);
-						}*/
+						// for (int u = 0; u < generalParams.maxNodeCount; u++){
+						// 	int GAMMA = edgeswap_ptr->surfaceNormal_device_vecs(
+						// 		u,
+						// 		coordInfoVecs,
+						// 		generalParams
+						// 	);
+						// }
 						//std::cout<<"STOPPED BEFORE AdvancePos"<<std::endl;
  						AdvancePositions(
  							coordInfoVecs,
@@ -1275,74 +1252,44 @@ void System::solveSystem() {
  					old_total_energy = new_total_energy;
  					current_time+=generalParams.dt;
 					// std::cout<<"STOPPED at the end of one time step in relaxation"<<std::endl;
-
-					
-
-					if (translate_counter % (translate_frequency*5) == 1){
-						max_height = -10000.0;
-						for (int k = 0; k < generalParams.maxNodeCount; k++){
-							if (coordInfoVecs. nodeLocZ[k] >= max_height){
-								max_height = coordInfoVecs.nodeLocZ[k];
-								max_height_index = k;
-							}
-					
-						}
-						//std::cout<<"max_height_index = "<<max_height_index<<std::endl;
-						dtb = 0.0;//dtb := distance to boundary
-						generalParams.septin_ring_z = 0.0;
-						generalParams.boundary_z = 0.0;
-						//for (int k = 0; k < boundary_edge_list.size(); k++){
-						for (int k = 0; k < boundary_node_list.size(); k++){
-							double n1 = boundary_node_list[k];//coordInfoVecs.edges2Nodes_1[boundary_edge_list[k]];
-							//double n2 = coordInfoVecs.edges2Nodes_2[boundary_edge_list[k]];
-							//double cent_of_edge_x = (coordInfoVecs.nodeLocX[n1] + coordInfoVecs.nodeLocX[n2])/2.0;
-							//double cent_of_edge_y = (coordInfoVecs.nodeLocY[n1] + coordInfoVecs.nodeLocY[n2])/2.0;
-							//double cent_of_edge_z = (coordInfoVecs.nodeLocZ[n1] + coordInfoVecs.nodeLocZ[n2])/2.0;
-							double dist_x = coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1];//cent_of_edge_x;
-							double dist_y = coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1];//cent_of_edge_y;
-							double dist_z = coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1];//cent_of_edge_z;
-							double temp_dist = sqrt((coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1])*(coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1]) +
-							(coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1])*(coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1]) +
-								(coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1])*(coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1]));
-							generalParams.septin_ring_z += coordInfoVecs.nodeLocZ[n1];
-							if (temp_dist >= dtb){
-								dtb = temp_dist;
-								/* "dtb" will be used to identify where the septin ring is located, and used to determine the Hill coefficient*/
-							}
-						}
-						//std::cout<<"dtb = "<<dtb<<std::endl;
-						generalParams.septin_ring_z = generalParams.septin_ring_z/boundary_node_list.size();
-						generalParams.boundary_z = generalParams.septin_ring_z - generalParams.Rmin;
-						/* dtb will be only calculated once so we can effectively keep the Hill eqn curve consistent with only horizontal shift */
-						dtb_max = dtb + (generalParams.Rmin);
-						// generalParams.septin_ring_z = 0.0;
-						// generalParams.boundary_z = 0.0;
-						// //for (int k = 0; k < boundary_edge_list.size(); k++){
-						// for (int k = 0; k < boundary_node_list.size(); k++){
-						// 	double n1 = boundary_node_list[k];//coordInfoVecs.edges2Nodes_1[boundary_edge_list[k]];
-						// 	generalParams.septin_ring_z += coordInfoVecs.nodeLocZ[n1];
-						// }
-						//generalParams.septin_ring_z = generalParams.septin_ring_z/boundary_node_list.size();
-						//generalParams.boundary_z = generalParams.septin_ring_z - generalParams.Rmin;
-						/* dtb will be only calculated once so we can effectively keep the Hill eqn curve consistent with only horizontal shift */
-				
-						generalParams.hilleqnconst = (dtb + generalParams.Rmin/4.0)/dtb_max;
-
-						edgeswap_ptr->transferDtoH(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);//Currently this is treated as a backup of coordInfoVecs
-						edgeswap_ptr->gradient_weakening_update_host_vecs(sigma,
-							max_height_index,
-							dtb,
-							dtb_max,
-							generalParams,
-							coordInfoVecs,
-							build_ptr->hostSetInfoVecs);
-						edgeswap_ptr->transferHtoD(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);//Currently this is treated as a backup of coordInfoVecs
-						}	
-
 					}
 					//std::cout<<"end relaxation step"<<std::endl;
 					 
-						
+					max_height = -10000.0;
+					for (int k = 0; k < generalParams.maxNodeCount; k++){
+						if (coordInfoVecs. nodeLocZ[k] >= max_height){
+							max_height = coordInfoVecs.nodeLocZ[k];
+							max_height_index = k;
+						}
+					
+					}
+					//std::cout<<"max_height_index = "<<max_height_index<<std::endl;
+					dtb = 0.0;//dtb := distance to boundary
+					//for (int k = 0; k < boundary_edge_list.size(); k++){
+					for (int k = 0; k < boundary_node_list.size(); k++){
+						double n1 = boundary_node_list[k];//coordInfoVecs.edges2Nodes_1[boundary_edge_list[k]];
+						//double n2 = coordInfoVecs.edges2Nodes_2[boundary_edge_list[k]];
+						//double cent_of_edge_x = (coordInfoVecs.nodeLocX[n1] + coordInfoVecs.nodeLocX[n2])/2.0;
+						//double cent_of_edge_y = (coordInfoVecs.nodeLocY[n1] + coordInfoVecs.nodeLocY[n2])/2.0;
+						//double cent_of_edge_z = (coordInfoVecs.nodeLocZ[n1] + coordInfoVecs.nodeLocZ[n2])/2.0;
+						double dist_x = coordInfoVecs.nodeLocX[max_height_index] - coordInfoVecs.nodeLocX[n1];//cent_of_edge_x;
+						double dist_y = coordInfoVecs.nodeLocY[max_height_index] - coordInfoVecs.nodeLocY[n1];//cent_of_edge_y;
+						double dist_z = coordInfoVecs.nodeLocZ[max_height_index] - coordInfoVecs.nodeLocZ[n1];//cent_of_edge_z;
+						dtb += sqrt(dist_x*dist_x + dist_y*dist_y + dist_z*dist_z);
+					}
+					//dtb = /*(generalParams.Rmin/2.0) +*/ dtb/(boundary_edge_list.size());
+					dtb = (generalParams.Rmin/2.0) + dtb/(boundary_node_list.size());
+					//std::cout<<"current distance between cell tip and the boundary of weakened area = "<<dtb<<std::endl;
+
+					edgeswap_ptr->transferDtoH(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);//Currently this is treated as a backup of coordInfoVecs
+					edgeswap_ptr->gradient_weakening_update_host_vecs(sigma,
+						max_height_index,
+						dtb,
+						generalParams,
+						coordInfoVecs,
+						build_ptr->hostSetInfoVecs);
+					edgeswap_ptr->transferHtoD(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);//Currently this is treated as a backup of coordInfoVecs
+											
 			
  					/*if (edgeswap_iteration % (2*RECORD_TIME) == 0){
 						if (reduce_counter*0.05 < 0.89){
@@ -1454,7 +1401,6 @@ void System::solveSystem() {
 							std::cout<<"cell diameter = "<<max_height - min_height<<std::endl;
 						}
 						 storage->print_VTK_File();
-						 std::cout<<"current Hill equation constant = "<<generalParams.hilleqnconst<<std::endl;
 						 //storage->storeVariables();
 						 std::cout<<"current total energy = "<< new_total_energy<<std::endl;
 						 std::cout<<"true current total volume = "<<generalParams.true_current_total_volume<<std::endl;
@@ -1465,7 +1411,7 @@ void System::solveSystem() {
 						//std::cout<<"VOLUME ENERGY = "<<generalParams.volume_energy<<std::endl;
  					}
  					if (edgeswap_iteration == NKBT-1 ){
- 						//storage->storeVariables();
+ 						storage->storeVariables();
 					 }
 
 					
@@ -1711,12 +1657,12 @@ for (int p = 0; p < MAX_GROWTH_TEST; p++){
 }
 edgeswap_ptr->transferHtoD(generalParams, coordInfoVecs, build_ptr->hostSetInfoVecs);
 //std::cout<<"END GROWTH ALGORITHM"<<std::endl;
-if (true_DELTA >= 1){
-	triggered = true;
-	std::cout<<"number of cell wall insertion = "<<true_DELTA<<std::endl;
-	storage->print_VTK_File();
-	std::cout<<"cell wall insertion triggered!"<<std::endl;
-}
+//if (true_DELTA >= 1){
+//	triggered = true;
+//	std::cout<<"number of cell wall insertion = "<<true_DELTA<<std::endl;
+	//storage->print_VTK_File();
+//	std::cout<<"cell wall insertion triggered!"<<std::endl;
+//}
 
 				if (triggered == true){	
 					true_num_edges_in_upperhem = 0;

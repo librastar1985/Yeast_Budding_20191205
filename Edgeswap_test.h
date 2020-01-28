@@ -54,9 +54,10 @@ class Edgeswap {
     void transferDtoH(GeneralParams& generalParams,
         CoordInfoVecs& coordInfoVecs,
         HostSetInfoVecs& hostSetInfoVecs);
-    void gradient_weakening_update_host_vecs(double sigma,
+     void gradient_weakening_update_host_vecs(double sigma,
         double max_height_index,
         double distance_to_boundary,
+        double distance_to_boundary_max,
         GeneralParams& generalParams,
         CoordInfoVecs& coordInfoVecs,
         HostSetInfoVecs& hostSetInfoVecs);

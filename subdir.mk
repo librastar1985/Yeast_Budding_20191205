@@ -16,6 +16,7 @@ ILIBS_cuda9 := -I/opt/linux/centos/7.x/x86_64/pkgs/cuda/9.1/include/
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
+../TurgorForce.cu \
 ../AreaTriangles.cu \
 ../BendingTriangles.cu \
 ../MemRepulsionSprings.cu\
@@ -36,6 +37,7 @@ CPP_SRCS += \
 
 # this is a variable
 OBJS += \
+./TurgorForce.o \
 ./AreaTriangles.o \
 ./BendingTriangles.o \
 ./MemRepulsionSprings.o\
@@ -55,6 +57,7 @@ OBJS += \
 
 
 CPP_DEPS += \
+./TurgorForce.d \
 ./AreaTriangles.d \
 ./BendingTriangles.d \
 ./MemRepulsionSprings.d\

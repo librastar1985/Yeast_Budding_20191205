@@ -111,10 +111,14 @@ struct AreaSpringFunctor {
                 }
             }
             else if (SCALE_TYPE == 4){
-            double scaling = 0.0;//spring_constant_weak/spring_constant;
-			what_spring_constant = (spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_i], hilleqnpow)))*(1-scaling) + scaling) +
-                                    spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_j], hilleqnpow)))*(1-scaling) + scaling) +
-                                    spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_k], hilleqnpow)))*(1-scaling) + scaling))/3.0;
+            //double scaling = 0.0;//spring_constant_weak/spring_constant;
+			// what_spring_constant = (spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_i], hilleqnpow)))*(1-scaling) + scaling) +
+            //                         spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_j], hilleqnpow)))*(1-scaling) + scaling) +
+            //                         spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_k], hilleqnpow)))*(1-scaling) + scaling))/3.0;
+            double spectrum = spring_constant - spring_constant_weak;
+            what_spring_constant = (spring_constant_weak + ((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_i], hilleqnpow)))*spectrum) +
+                                    spring_constant_weak + ((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_j], hilleqnpow)))*spectrum) +
+                                    spring_constant_weak + ((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[e_id_k], hilleqnpow)))*spectrum))/3.0;
 			if (what_spring_constant < spring_constant_weak){what_spring_constant = spring_constant_weak;}
 		    }
 

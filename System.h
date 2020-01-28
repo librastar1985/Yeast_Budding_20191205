@@ -315,6 +315,7 @@ struct LinearSpringInfoVecs {
 
 struct GeneralParams{
 	double kT;
+	double kT_growth;
 	double tau;
 	int solve_time=100;
 	double Rmin = 1.0; //Current mesh minimum edge length, subject to change.
@@ -363,6 +364,10 @@ struct GeneralParams{
 	double gausssigma;
 	double hilleqnconst;
 	double hilleqnpow;
+
+	thrust::device_vector<int> no_weakening;
+	double septin_ring_z;
+	double boundary_z;
 
 };
 

@@ -104,9 +104,11 @@ struct LinearSpringFunctor {
                 }
             }
             else if (SCALE_TYPE == 4){
-                double scaling = 0.0;//spring_constant_weak/spring_constant;
-			what_spring_constant = spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[counter], hilleqnpow)))*(1-scaling) + scaling);
-			if (what_spring_constant < spring_constant_weak){what_spring_constant = spring_constant_weak;}
+                //double scaling = 0.0;//spring_constant_weak/spring_constant;
+                double spectrum = spring_constant - spring_constant_weak;
+			    //what_spring_constant = spring_constant*((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[counter], hilleqnpow)))*(1-scaling) + scaling);
+			    what_spring_constant = spring_constant_weak + ((1.0/(1.0+pow(hilleqnconst/scaling_per_edge[counter], hilleqnpow)))*spectrum);
+                if (what_spring_constant < spring_constant_weak){what_spring_constant = spring_constant_weak;}
 		    }
 
             

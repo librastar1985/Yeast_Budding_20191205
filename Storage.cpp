@@ -1,5 +1,4 @@
 
-
 #include "System.h"
 #include "Storage.h"
 
@@ -45,8 +44,10 @@ void Storage::print_VTK_File(void) {
 		//std::string initial = "Animation_realistic_finaltry/wrap_v0d0001_dt0d0001_newrange_";
 		//std::string initial = "Animation_realistic/membrane_";//volumetest40_n2d0lowhem10_ka0_eqvol1d5_";//spheretest_rad0d17549_lowerhem5_ka5_ks25kb5_LJR2_"; //Anneal_adh15_Rv0d75_MD20a7d5_v0d2_NKBT4000_dt0d0002_";
 		//std::string initial = "Animation_realistic/yeastbudding_septinring_test_3particle_";
-		//std::string initial = "Animation_realistic3/YB_calib_largesphere3_MPa0d0125_";//yeastbudding_septin40_test_6particle_1pullonly_";
-		std::string initial = "Animation_realistic/YB_cellwall2_hilleqnc0d9p70_cw0d0025_";
+		std::string initial = "Animation_realistic5/YB_cellwall4_l1d0b0d2_vols0d2_3rdtry_";//yeastbudding_septin40_test_6particle_1pullonly_";
+		//std::string initial = "Animation_realistic/YB_reactive_isotropic_scalels0d01bs0d01as0d01_vols4d0_expthresh1d5rule1_";
+		//std::string initial = "Animation_realistic4/YB_cellwall3_isotropic_scalel0d5b0d25a0d5_vols0d3_expprob0d0025_dt0d001_1sttry_";
+		//std::string initial = "Animation_realistic/YB_recalib_l2a2b0d5_MPa0d05_";
 		//std::string initial = "Animation_realistic_flow/Pflow0d5_v0d0005_MRT0d005_dt0d0002_";
 		std::ofstream ofs;
 		if (digits == 1 || digits == 0) {
@@ -277,7 +278,8 @@ void Storage::storeVariables(void) {
 		//std::string initial = "Animation_realistic_finaltry/wrap_v0d0001_dt0d0001_newrange_";
 		//std::string initial = "Animation_realistic/membrane_";//volumetest40_n2d0lowhem10_ka0_eqvol1d5_";//spheretest_rad0d17549_lowerhem5_ka5_ks25kb5_LJR2_"; //Anneal_adh15_Rv0d75_MD20a7d5_v0d2_NKBT4000_dt0d0002_";
 		//std::string initial = "Animation_realistic/yeastbudding_septinring_test_3particle_";
-		std::string initial = "Variables_realistic/YB_cellwall2_hilleqnc0d9p70_cw0d0025_";//yeastbudding_septin40_test_6particle_1pullonly_";
+		//std::string initial = "Variables_realistic/YB_reactive_isotropic_scalels0d01bs0d01as0d01_vols4d0_expthresh1d5rule1_";//yeastbudding_septin40_test_6particle_1pullonly_";
+		std::string initial = "Variables_realistic5/YB_cellwall4_l1d0b0d2_vols0d2_3rdtry_";
 		//std::string initial = "Animation_realistic_flow/Pflow0d5_v0d0005_MRT0d005_dt0d0002_";
 		std::ofstream ofs;
 		if (digits == 1 || digits == 0) {
