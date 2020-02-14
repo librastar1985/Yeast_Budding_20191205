@@ -20,7 +20,9 @@ struct LinearSpringFunctor {
     double spring_constant;
     double spring_constant_weak;
     double length_zero;
+    //double length_zero_growth;
     int* edges_in_upperhem;
+    //int* boundaries_in_upperhem;
 
     double* locXAddr;
     double* locYAddr;
@@ -41,7 +43,9 @@ struct LinearSpringFunctor {
         double& _spring_constant,
         double& _spring_constant_weak,
         double& _length_zero,
+       // double& _length_zero_growth,
         int* _edges_in_upperhem,
+       // int* _boundaries_in_upperhem,
         double* _locXAddr,
         double* _locYAddr,
         double* _locZAddr,
@@ -59,7 +63,9 @@ struct LinearSpringFunctor {
         spring_constant(_spring_constant),
         spring_constant_weak(_spring_constant_weak),
         length_zero(_length_zero),
+       // length_zero_growth(_length_zero_growth),
         edges_in_upperhem(_edges_in_upperhem),
+       // boundaries_in_upperhem(_boundaries_in_upperhem),
         locXAddr(_locXAddr),
         locYAddr(_locYAddr),
         locZAddr(_locZAddr),
@@ -95,6 +101,7 @@ struct LinearSpringFunctor {
             else if (SCALE_TYPE == 3){
                 if (edges_in_upperhem[counter] == 1){
                     what_spring_constant = spring_constant_weak;
+                    //length_zero = length_zero_growth;
                 }
                 else if (edges_in_upperhem[counter] == 0){
                     what_spring_constant = (spring_constant_weak + spring_constant)/2.0;

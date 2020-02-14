@@ -132,7 +132,7 @@ struct AreaSpringFunctor {
             CVec3 rkj = CVec3_subtract(rk, rj);
             CVec3 rij = CVec3_subtract(ri, rj);
 
-            double area_current = sqrt( CVec3_dot( CVec3_cross(rkj, rij), CVec3_cross(rkj, rij) ) )/2;
+            double area_current = sqrt( CVec3_dot( CVec3_cross(rkj, rij), CVec3_cross(rkj, rij) ) )/2.0;
 
             //computes derivative wrt to area
             CVec3 A = CVec3_cross(rkj, rij);//rkj must come first
@@ -203,7 +203,7 @@ struct AreaSpringFunctor {
             forceYAddr[place+2] = thrust::get<1>( rk_force );
             forceZAddr[place+2] = thrust::get<2>( rk_force );
 
-            double energy =  what_spring_constant/(2.0) * (area_current - area_0) * (area_current - area_0) / area_0;
+            double energy =  (what_spring_constant/(2.0)) * (area_current - area_0) * (area_current - area_0) / area_0;
             return energy;
         }
         else{

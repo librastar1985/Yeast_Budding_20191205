@@ -42,6 +42,7 @@ GeneralParams& generalParams) {
 void Edgeswap::gradient_weakening_update_host_vecs(double sigma,
     double max_height_index,
     double distance_to_boundary,
+    double distance_to_boundary_max,
     GeneralParams& generalParams,
     CoordInfoVecs& coordInfoVecs,
     HostSetInfoVecs& hostSetInfoVecs){
@@ -66,10 +67,8 @@ void Edgeswap::gradient_weakening_update_host_vecs(double sigma,
     }
     else{
         for (int i = 0; i < coordInfoVecs.num_edges; i++){
-            if (hostSetInfoVecs.edges_in_upperhem[i] < 0 && hostSetInfoVecs.edges_in_upperhem[i] != INT_MAX){
-                hostSetInfoVecs.scaling_per_edge[i] = 1.0;
-                continue;
-            }
+            int v1 = hostSetInfoVecs.edges2Nodes_1[i];
+            int v2 = hostSetInfoVecs.edges2Nodes_2[i];
             if (hostSetInfoVecs.edges2Nodes_1[i] == INT_MAX || hostSetInfoVecs.edges2Nodes_1[i] < 0){
                 hostSetInfoVecs.scaling_per_edge[i] = -INT_MAX;
                 continue;
@@ -78,8 +77,33 @@ void Edgeswap::gradient_weakening_update_host_vecs(double sigma,
                 hostSetInfoVecs.scaling_per_edge[i] = -INT_MAX;
                 continue;
             }
-            int v1 = hostSetInfoVecs.edges2Nodes_1[i];
-            int v2 = hostSetInfoVecs.edges2Nodes_2[i];
+            double avg_z = (hostSetInfoVecs.nodeLocZ[v1] + hostSetInfoVecs.nodeLocZ[v2])/2.0;
+            if (hostSetInfoVecs.edges_in_upperhem[i] != 1 || hostSetInfoVecs.edges_in_upperhem[i] != 0){
+                if (avg_z < generalParams.boundary_z){
+                    hostSetInfoVecs.scaling_per_edge[i] = 1.0;
+                    continue;
+                }
+                else{
+                    double avg_x = (hostSetInfoVecs.nodeLocX[v1] + hostSetInfoVecs.nodeLocX[v2])/2.0;
+                    double avg_y = (hostSetInfoVecs.nodeLocY[v1] + hostSetInfoVecs.nodeLocY[v2])/2.0;
+                    double avg_z = (hostSetInfoVecs.nodeLocZ[v1] + hostSetInfoVecs.nodeLocZ[v2])/2.0;
+                    double dtt = sqrt((hostSetInfoVecs.nodeLocX[max_height_index] - avg_x)*(hostSetInfoVecs.nodeLocX[max_height_index] - avg_x) +
+                                                (hostSetInfoVecs.nodeLocY[max_height_index] - avg_y)*(hostSetInfoVecs.nodeLocY[max_height_index] - avg_y) +
+                                                (hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)*(hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)); //dtt := distance to tip
+                    //scale = (1.0/sqrt(2.0*pi*sigma*sigma))*exp(-(dtt/distance_to_boundary)*(dtt/distance_to_boundary)/(sigma*sigma));///(1.0/sqrt(2.0*pi*sigma*sigma));
+                    //double dtt = sqrt((hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)*(hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z));
+                    scale = (dtt/distance_to_boundary_max);
+                    
+                    if (scale > 1.0){
+                        scale = 1.0;
+                    }
+                    else{}
+                    scale_need = true;
+                }
+            }
+           
+            
+           
 
             if (generalParams.edges_in_upperhem[i] == 1 || generalParams.edges_in_upperhem[i] == 0){//(generalParams.nodes_in_upperhem[v1] == 1 && generalParams.nodes_in_upperhem[v2] == 1){
                 double avg_x = (hostSetInfoVecs.nodeLocX[v1] + hostSetInfoVecs.nodeLocX[v2])/2.0;
@@ -89,7 +113,8 @@ void Edgeswap::gradient_weakening_update_host_vecs(double sigma,
                                             (hostSetInfoVecs.nodeLocY[max_height_index] - avg_y)*(hostSetInfoVecs.nodeLocY[max_height_index] - avg_y) +
                                             (hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)*(hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)); //dtt := distance to tip
                 //scale = (1.0/sqrt(2.0*pi*sigma*sigma))*exp(-(dtt/distance_to_boundary)*(dtt/distance_to_boundary)/(sigma*sigma));///(1.0/sqrt(2.0*pi*sigma*sigma));
-                scale = (dtt/distance_to_boundary);
+                //double dtt = sqrt((hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z)*(hostSetInfoVecs.nodeLocZ[max_height_index] - avg_z));
+                scale = (dtt/distance_to_boundary_max);
                 
                 
                 //if (dtt < tip_threshold){
@@ -100,7 +125,7 @@ void Edgeswap::gradient_weakening_update_host_vecs(double sigma,
                 //}
 
                 if (scale > 1.0){
-                    scale = 1.0;
+                    scale = 0.0;
                 }
                 else{}
                 //std::cout<<"dtt/distance_to_boundary = "<<dtt/distance_to_boundary<<std::endl;
@@ -364,7 +389,7 @@ int Edgeswap::growth_host_vecs(
         else {std::cout<<"tail not set" <<std::endl;}
 
         bool BAD_CHOICE = false;
-        for (int q = 0; q < 2; q++){
+        for (int q = 0; q < 4; q++){
             double qq;
             if (q == 0){
                 qq = edge_start;
@@ -372,7 +397,12 @@ int Edgeswap::growth_host_vecs(
             else if (q == 1){
                 qq = edge_end;
             }
-            
+            else if (q == 2){
+                qq = HEAD;
+            }
+            else if (q == 3){
+                qq = TAIL;
+            }
             int safe_flip1 = 0;
             if (hostSetInfoVecs.nndata1[qq] >= 0){safe_flip1 += 1;        }
             if (hostSetInfoVecs.nndata2[qq] >= 0){safe_flip1 += 1;        }
@@ -383,14 +413,32 @@ int Edgeswap::growth_host_vecs(
             if (hostSetInfoVecs.nndata7[qq] >= 0){safe_flip1 += 1;        }
             if (hostSetInfoVecs.nndata8[qq] >= 0){safe_flip1 += 1;        }
             if (hostSetInfoVecs.nndata9[qq] >= 0){safe_flip1 += 1;        }
-            //if (hostSetInfoVecs.nndata10[qq] >= 0){safe_flip1 += 1;        }
-            //if (hostSetInfoVecs.nndata11[qq] >= 0){safe_flip1 += 1;        }
-            //if (hostSetInfoVecs.nndata12[qq] >= 0){safe_flip1 += 1;        }
+           // if (hostSetInfoVecs.nndata10[qq] >= 0){safe_flip1 += 1;        }
+           // if (hostSetInfoVecs.nndata11[qq] >= 0){safe_flip1 += 1;        }
+           // if (hostSetInfoVecs.nndata12[qq] >= 0){safe_flip1 += 1;        }
 
-            if (safe_flip1 >= generalParams.safeguardthreshold){
+            if (q == 0){// && safe_flip1 == 4){
+                //BAD_CHOICE = true;
+               // std::cout<<"BAD_CHOICE = "<<BAD_CHOICE<<std::endl;
+                //std::cout<<"SAFE_FLIP_start = "<<safe_flip1<<std::endl;
+                //break;
+            }
+            else if (q == 1){// && safe_flip1 == 4){
+                //BAD_CHOICE = true;
+               // std::cout<<"BAD_CHOICE = "<<BAD_CHOICE<<std::endl;
+        //std::cout<<"SAFE_FLIP_end = "<<safe_flip1<<std::endl;
+                //break;
+            }
+            else if (q == 2 && safe_flip1 == generalParams.safeguardthreshold){
                 BAD_CHOICE = true;
                // std::cout<<"BAD_CHOICE = "<<BAD_CHOICE<<std::endl;
-               // std::cout<<"SAFE_FLIP = "<<safe_flip1<<std::endl;
+        //std::cout<<"SAFE_FLIP_H = "<<safe_flip1<<std::endl;
+                break;
+            }
+            else if (q == 3 && safe_flip1 == generalParams.safeguardthreshold){
+                BAD_CHOICE = true;
+               // std::cout<<"BAD_CHOICE = "<<BAD_CHOICE<<std::endl;
+        //std::cout<<"SAFE_FLIP_T = "<<safe_flip1<<std::endl;
                 break;
             }
         }
@@ -452,22 +500,27 @@ int Edgeswap::growth_host_vecs(
             double area_H0 = sqrt(mean_abc*(mean_abc - a)*(mean_abc - b)*(mean_abc - c));
             double area_T0 = sqrt(mean_def*(mean_def - d)*(mean_def - e)*(mean_def - f));
             double avg_area = (area_H0 + area_T0)/2.0;
-            std::random_device rd;  //Will be used to obtain a seed for the random number engine
-            std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
-            std::uniform_real_distribution<> dis(0.0, 1.0);
-            double random_number = dis(gen);
-            //double random_number = 0;
-            double Edif = generalParams.insertion_energy_cost*(1.0 - (1.0/generalParams.strain_threshold)*((avg_area/areaTriangleInfoVecs.initial_area) - 1));
-            //std::cout<<Edif<<std::endl;
-           // double prob = generalParams.tau*exp(-(Edif*generalParams.growth_energy_scaling)/generalParams.kT);
-            double prob = generalParams.tau*exp(-(Edif*generalParams.growth_energy_scaling)/generalParams.kT_growth);
-            if (prob >= 1){
-                prob = 1;
-            }
-            //std::cout<<"prob = "<<prob<<std::endl;
-            if (random_number < prob){
-                GROWTH_ACCEPTED = true;
-            }
+        //     std::random_device rd;  //Will be used to obtain a seed for the random number engine
+        //     std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+        //     std::uniform_real_distribution<> dis(0.0, 1.0);
+        //     double random_number = dis(gen);
+        //     //double random_number = 0;
+        //     double Edif = generalParams.insertion_energy_cost*(1.0 - (1.0/generalParams.strain_threshold)*((avg_area/areaTriangleInfoVecs.initial_area) - 1));
+        //     //std::cout<<Edif<<std::endl;
+        //    // double prob = generalParams.tau*exp(-(Edif*generalParams.growth_energy_scaling)/generalParams.kT);
+        //     double prob = generalParams.tau*exp(-(Edif*generalParams.growth_energy_scaling)/generalParams.kT_growth);
+        //     if (prob >= 1){
+        //         prob = 1;
+        //     }
+        //     //std::cout<<"prob = "<<prob<<std::endl;
+        //     if (random_number < prob){
+        //         GROWTH_ACCEPTED = true;
+        //     }
+        if ((avg_area - areaTriangleInfoVecs.initial_area)/areaTriangleInfoVecs.initial_area >= generalParams.strain_threshold){
+            GROWTH_ACCEPTED = true;
+        }
+    
+        //GROWTH_ACCEPTED = true;
             
       }
     //if (H0 > 20000.0){
@@ -1156,7 +1209,7 @@ int Edgeswap::growth_host_vecs(
 		generalParams.edges_in_upperhem[iedge] = INT_MAX;
 		for (int i = 0; i < coordInfoVecs.num_edges; i++){
 			if (generalParams.edges_in_upperhem_list[i] == iedge){
-				generalParams.edges_in_upperhem_list[i] == INT_MAX;
+				generalParams.edges_in_upperhem_list[i] = INT_MAX;
 				//break;
 			}
 		}
@@ -1241,7 +1294,7 @@ int Edgeswap::growth_host_vecs(
         //std::cout<<"cell wall inserted!"<<std::endl;
     }
     else{
-        alpha = -1;
+        alpha = 0;
     }
     return alpha;
 }
@@ -1553,9 +1606,11 @@ int Edgeswap::edge_swap_host_vecs(
                     }
             }
             else if (generalParams.SCALE_TYPE == 4){
-                double scaling = 0.0;//linearSpringInfoVecs.spring_constant_weak/linearSpringInfoVecs.spring_constant;
-			    linear_spring_constant = linearSpringInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[0]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
-			    if (linear_spring_constant < linearSpringInfoVecs.spring_constant_weak){linear_spring_constant = linearSpringInfoVecs.spring_constant_weak;}
+                //double scaling = 0.0;//linearSpringInfoVecs.spring_constant_weak/linearSpringInfoVecs.spring_constant;
+                //linear_spring_constant = linearSpringInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[0]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
+			    double spectrum = linearSpringInfoVecs.spring_constant - linearSpringInfoVecs.spring_constant_weak;
+                linear_spring_constant = linearSpringInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[0]], generalParams.hilleqnpow)))*spectrum);
+                if (linear_spring_constant < linearSpringInfoVecs.spring_constant_weak){linear_spring_constant = linearSpringInfoVecs.spring_constant_weak;}
 		}
             edges_iteration[1] = H1;
             edges_iteration[2] = H2;
@@ -1606,8 +1661,10 @@ int Edgeswap::edge_swap_host_vecs(
                         }
                     }
                     else if (generalParams.SCALE_TYPE == 4){
-                        double scaling = 0.0;//bendingTriangleInfoVecs.spring_constant_weak/bendingTriangleInfoVecs.spring_constant;
-                        bend_spring_constant = bendingTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
+                        //double scaling = 0.0;//bendingTriangleInfoVecs.spring_constant_weak/bendingTriangleInfoVecs.spring_constant;
+                        //bend_spring_constant = bendingTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
+                        double spectrum = bendingTriangleInfoVecs.spring_constant - bendingTriangleInfoVecs.spring_constant_weak;
+                        bend_spring_constant = bendingTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*spectrum);
                         if (bend_spring_constant < bendingTriangleInfoVecs.spring_constant_weak){bend_spring_constant = bendingTriangleInfoVecs.spring_constant_weak;}
                     }
                     int Tri1 = hostSetInfoVecs.edges2Triangles_1[edges_iteration[j]];//index of the 1st triangle
@@ -1717,8 +1774,16 @@ int Edgeswap::edge_swap_host_vecs(
             //	(DISTANCE - generalParams.Rmin);
             //}
             //else{
-                linear_0 = (linear_spring_constant/(2.0*generalParams.Rmin*generalParams.Rmin))*(DISTANCE - generalParams.Rmin)*
-                (DISTANCE - generalParams.Rmin);
+                // linear_0 = (linear_spring_constant/(2.0*generalParams.Rmin*generalParams.Rmin))*(DISTANCE - generalParams.Rmin)*
+                // (DISTANCE - generalParams.Rmin);
+                // if (hostSetInfoVecs.edges_in_upperhem[edges_iteration[0]] == 1 && hostSetInfoVecs.boundaries_in_upperhem[edges_iteration[0]] == 0){
+                //     linear_0 = (linear_spring_constant/(2.0))*(DISTANCE - generalParams.Rmin_growth)*
+                //     (DISTANCE - generalParams.Rmin_growth);
+                // }
+                // else{
+                    linear_0 = (linear_spring_constant/(2.0))*(DISTANCE - generalParams.Rmin)*
+                    (DISTANCE - generalParams.Rmin);
+                //}
             //}
             
             //else if (DISTANCE < generalParams.Rmin ){
@@ -1805,12 +1870,16 @@ int Edgeswap::edge_swap_host_vecs(
                 }
             }
             else if (generalParams.SCALE_TYPE == 4){
-                double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
-			    area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
-			    if (area_spring_constant_1 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_1 = areaTriangleInfoVecs.spring_constant_weak;}
-		    }
+               // double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
+			    // area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                    areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                    areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
+			    double spectrum = areaTriangleInfoVecs.spring_constant - areaTriangleInfoVecs.spring_constant_weak;
+                area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*spectrum) +
+                   areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*spectrum) +
+                   areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*spectrum))/3.0;
+                if (area_spring_constant_1 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_1 = areaTriangleInfoVecs.spring_constant_weak;}
+		       }
             /*if (generalParams.triangles_in_upperhem[T0] == 1){
                 area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;
             }
@@ -1849,12 +1918,16 @@ int Edgeswap::edge_swap_host_vecs(
                 }
             }
             else if (generalParams.SCALE_TYPE == 4){
-                double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
-			    area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
-			    if (area_spring_constant_2 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;}
-		    }
+                //double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
+			    //area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                          areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                          areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
+			    double spectrum = areaTriangleInfoVecs.spring_constant - areaTriangleInfoVecs.spring_constant_weak;
+                area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*spectrum) +
+                                          areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*spectrum) +
+                                          areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*spectrum))/3.0;
+                if (area_spring_constant_2 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;}
+		   }
             double area_H0 = sqrt(mean_abc*(mean_abc - a)*(mean_abc - b)*(mean_abc - c));
             double area_T0 = sqrt(mean_def*(mean_def - d)*(mean_def - e)*(mean_def - f));
             double area_0_energy = area_spring_constant_1*pow((area_H0 - areaTriangleInfoVecs.initial_area),2.0)/(2*areaTriangleInfoVecs.initial_area) +
@@ -1864,10 +1937,10 @@ int Edgeswap::edge_swap_host_vecs(
             //double vol_T0 = (1.0/3.0)*(P0x_vol2*N2x_vol + P0y_vol2*N2y_vol + P0z_vol2*N2z_vol)*area_T0;
             //vol_0 = vol_H0 + vol_T0;
             double E_0 = linear_0 + bend_0 + area_0_energy;// + generalParams.volume_energy;
-            //std::cout<<"old linear energy: "<<linear_0<<std::endl;
-            //std::cout<<"old bend energy: "<<bend_0<<std::endl;
-            //std::cout<<"old area energy: "<<area_0_energy<<std::endl;
-            //std::cout<<"old total energy: "<<E_0<<std::endl;
+            // std::cout<<"old linear energy: "<<linear_0<<" , old length = "<<DISTANCE<<std::endl;
+            // std::cout<<"old bend energy: "<<bend_0<<std::endl;
+            // std::cout<<"old area energy: "<<area_0_energy<<std::endl;
+            // std::cout<<"old total energy: "<<E_0<<std::endl;
 
             
             //Flip the edge, build the data structure for the smaller system.
@@ -2160,8 +2233,16 @@ int Edgeswap::edge_swap_host_vecs(
                 (DISTANCE - generalParams.Rmin);
             }*/
             //else{
-                linear_1 = (linearSpringInfoVecs.spring_constant/(2.0*generalParams.Rmin*generalParams.Rmin))*(DISTANCE - generalParams.Rmin)*
-                (DISTANCE - generalParams.Rmin);
+                // linear_1 = (linearSpringInfoVecs.spring_constant/(2.0*generalParams.Rmin*generalParams.Rmin))*(DISTANCE - generalParams.Rmin)*
+                // (DISTANCE - generalParams.Rmin);
+                // if (hostSetInfoVecs.edges_in_upperhem[edges_iteration[0]] == 1 && hostSetInfoVecs.boundaries_in_upperhem[edges_iteration[0]] == 0){
+                //     linear_1 = (linearSpringInfoVecs.spring_constant/(2.0))*(DISTANCE - generalParams.Rmin_growth)*
+                //     (DISTANCE - generalParams.Rmin_growth);
+                // }
+                //else{
+                    linear_1 = (linearSpringInfoVecs.spring_constant/(2.0))*(DISTANCE - generalParams.Rmin)*
+                    (DISTANCE - generalParams.Rmin);
+                //}
             //}
             
             //else if (DISTANCE < generalParams.Rmin){
@@ -2224,10 +2305,12 @@ int Edgeswap::edge_swap_host_vecs(
                         }
                     }
                     else if (generalParams.SCALE_TYPE == 4){
-                        double scaling = 0.0;//bendingTriangleInfoVecs.spring_constant_weak/bendingTriangleInfoVecs.spring_constant;
-                        bend_spring_constant = bendingTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
+                      //double scaling = 0.0;//bendingTriangleInfoVecs.spring_constant_weak/bendingTriangleInfoVecs.spring_constant;
+                        //bend_spring_constant = bendingTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*(1-scaling) + scaling);
+                        double spectrum = bendingTriangleInfoVecs.spring_constant - bendingTriangleInfoVecs.spring_constant_weak;
+                        bend_spring_constant = bendingTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[edges_iteration[j]], generalParams.hilleqnpow)))*spectrum);
                         if (bend_spring_constant < bendingTriangleInfoVecs.spring_constant_weak){bend_spring_constant = bendingTriangleInfoVecs.spring_constant_weak;}
-                    }
+                      }
 
                         if (j == 0){
                             N1_vec1x = hostSetInfoVecs.nodeLocX[HEAD] - hostSetInfoVecs.nodeLocX[TAIL];//x component of the 1st vector to calculate N1
@@ -2436,12 +2519,16 @@ int Edgeswap::edge_swap_host_vecs(
                     }
                 }
                 else if (generalParams.SCALE_TYPE == 4){
-                double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
-			    area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
-			    if (area_spring_constant_1 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_1 = areaTriangleInfoVecs.spring_constant_weak;}
-		    }
+                //double scaling = 0.0;//areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
+			    //area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                //                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
+			    double spectrum = areaTriangleInfoVecs.spring_constant - areaTriangleInfoVecs.spring_constant_weak;
+                area_spring_constant_1 = (areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*spectrum) +
+                                          areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H1], generalParams.hilleqnpow)))*spectrum) +
+                                          areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T1], generalParams.hilleqnpow)))*spectrum))/3.0;
+                if (area_spring_constant_1 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_1 = areaTriangleInfoVecs.spring_constant_weak;}
+		      }
                 /*if (generalParams.triangles_in_upperhem[T0] == 1){
                     area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;
                 }
@@ -2479,12 +2566,16 @@ int Edgeswap::edge_swap_host_vecs(
                     }
                 }
                 else if (generalParams.SCALE_TYPE == 4){
-                    double scaling = 0.0;// areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
-			    area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
-                                   areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
-			    if (area_spring_constant_2 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;}
-		    }
+                  //double scaling = 0.0;// areaTriangleInfoVecs.spring_constant_weak/areaTriangleInfoVecs.spring_constant;
+			        //area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                    //               areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*(1-scaling) + scaling) +
+                    //               areaTriangleInfoVecs.spring_constant*((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*(1-scaling) + scaling))/3.0;
+			        double spectrum = areaTriangleInfoVecs.spring_constant - areaTriangleInfoVecs.spring_constant_weak;
+                    area_spring_constant_2 = (areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[iedge], generalParams.hilleqnpow)))*spectrum) +
+                                              areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[T2], generalParams.hilleqnpow)))*spectrum) +
+                                              areaTriangleInfoVecs.spring_constant_weak + ((1.0/(1.0+pow(generalParams.hilleqnconst/hostSetInfoVecs.scaling_per_edge[H2], generalParams.hilleqnpow)))*spectrum))/3.0;
+                    if (area_spring_constant_2 < areaTriangleInfoVecs.spring_constant_weak){area_spring_constant_2 = areaTriangleInfoVecs.spring_constant_weak;}
+		   }
                 double area_H0 = sqrt(mean_abc*(mean_abc - a)*(mean_abc - b)*(mean_abc - c));
                 double area_T0 = sqrt(mean_def*(mean_def - d)*(mean_def - e)*(mean_def - f));
                 double area_1_energy = area_spring_constant_1*pow((area_H0 - areaTriangleInfoVecs.initial_area),2.0)/(2*areaTriangleInfoVecs.initial_area) +
@@ -2496,10 +2587,10 @@ int Edgeswap::edge_swap_host_vecs(
                 //double new_vol_energy = generalParams.volume_spring_constant*(new_vol - generalParams.eq_total_volume)*(new_vol - generalParams.eq_total_volume)/
                 //                        (2.0*generalParams.Rmin*generalParams.Rmin*generalParams.Rmin*generalParams.eq_total_volume);
                 double E_1 = linear_1 + bend_1 + area_1_energy;// + new_vol_energy;
-                //std::cout<<"new linear energy = "<<linear_1<<std::endl;
-                //std::cout<<"new bend energy = "<<bend_1<<std::endl;
-                //std::cout<<"new area energy = "<<area_1_energy<<std::endl;
-                //std::cout<<"new total energy: "<<E_1<<std::endl;
+                // std::cout<<"new linear energy = "<<linear_1<<" , new length = "<<DISTANCE<<std::endl;
+                // std::cout<<"new bend energy = "<<bend_1<<std::endl;
+                // std::cout<<"new area energy = "<<area_1_energy<<std::endl;
+                // std::cout<<"new total energy: "<<E_1<<std::endl;
             
             //Now compute the Boltzmann factor to determine if a swap occurs.
             std::random_device rd;  //Will be used to obtain a seed for the random number engine

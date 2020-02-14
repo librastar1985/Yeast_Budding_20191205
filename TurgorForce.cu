@@ -17,7 +17,7 @@ void ComputeTurgorSprings(
         thrust::fill(areaTriangleInfoVecs.tempNodeForceZUnreduced.begin(),areaTriangleInfoVecs.tempNodeForceZUnreduced.end(),0.0);
     
         
-        areaTriangleInfoVecs.area_triangle_energy = thrust::transform_reduce( 
+        areaTriangleInfoVecs.dummy = thrust::transform_reduce( 
 			thrust::make_zip_iterator(
 				thrust::make_tuple(
                     elemId,
