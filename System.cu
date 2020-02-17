@@ -149,7 +149,7 @@ void System::solveSystem() {
 
 	generalParams.insertion_energy_cost = -log(0.0025);
 	std::cout<<"GROWTH: material insertion energy cost (dependent on local chemical concentration) = "<<generalParams.insertion_energy_cost<<std::endl;
-	generalParams.strain_threshold = 0.1;
+	generalParams.strain_threshold = 0.1;//0.01;
 	std::cout<<"GROWTH: critical strain threshold used for insertion probability calculation = "<<generalParams.strain_threshold<<std::endl;
 
 	generalParams.growth_energy_scaling = 1.0;//0.01375;
@@ -178,14 +178,14 @@ void System::solveSystem() {
 	//This determines the number of edges to test for bondflip remeshing
 
 	auto edgeswap_ptr = std::make_shared<Edgeswap>(coordInfoVecs, generalParams);
-	int RECORD_TIME = 500;//round(Max_RunStep/2);
+	int RECORD_TIME = 400;//round(Max_RunStep/2);
 	std::cout<<"Record frequency = "<<RECORD_TIME<<std::endl;
 	//int GROWTH_TIME = 1;
 	//std::cout<<"Growth frequency = "<<GROWTH_TIME<<std::endl;
 	int translate_frequency = 200;
 	std::cout<<"translate + edgeswap frequency = "<<translate_frequency<<std::endl;
 	//translate_frequency determines the frequency for the mesh to re-center and perform dynamical remeshing
-	int NKBT = GROWTH_FREQUENCY*500;//10000;//7500; //The max number of edge-swap attempt per kBT value
+	int NKBT = GROWTH_FREQUENCY*400;//10000;//7500; //The max number of edge-swap attempt per kBT value
 	std::cout<<"Number of edge-swap per kBT value (or total number of edge-swap if kBT is fixed) = "<<NKBT<<std::endl;
 	double min_kT = -0.1;//0.21;
 	std::cout<<"min kT for simulation termination = "<<min_kT<<std::endl;
@@ -328,8 +328,8 @@ void System::solveSystem() {
 	//std::cout<<"equilibrium length of each segment of the septin ring = "<<generalParams.length_scale<<std::endl;
 
 	double scale_linear = linearSpringInfoVecs.spring_constant*0.5;//0.25;//25.0/2.5;//75.0/15.0;
-	double scale_bend = bendingTriangleInfoVecs.spring_constant*0.05;//0.05;//10.0/1.0;//75.0/7.5;
-	double scale_area = areaTriangleInfoVecs.spring_constant*0.2;//0.25;//50.0/5.0;//75.0/15.0;
+	double scale_bend = bendingTriangleInfoVecs.spring_constant*0.181;//0.05;//10.0/1.0;//75.0/7.5;
+	double scale_area = areaTriangleInfoVecs.spring_constant*0.1;//0.25;//50.0/5.0;//75.0/15.0;
 	std::cout<<"weakened region linear = "<<scale_linear<<std::endl;
 	std::cout<<"weakened region bend = "<<scale_bend<<std::endl;
 	std::cout<<"weakened region area = "<<scale_area<<std::endl;
@@ -836,6 +836,7 @@ void System::solveSystem() {
 		//generalParams.kT = 1.0;//reset kT before simulations starts.
 		//Max_Runtime = 0.0;//2.5;
 		int translate_counter = 0;
+		
 			while (current_time < 0.0*(Max_Runtime)){
 					translate_counter += 1;
 					Solve_Forces();
@@ -1058,6 +1059,7 @@ void System::solveSystem() {
 					}
 					//std::cout<<"start relaxation step"<<std::endl;
 					EDGESWAP_ALGORITHM_TRIGGERED = false;
+					bool end_of_relaxation = false;
  					while (current_time < Max_Runtime){
 						
 						 if (Max_Runtime <= 0.0){
@@ -1142,8 +1144,27 @@ void System::solveSystem() {
  							coordInfoVecs,
  							generalParams,
 							 domainParams);
+
+						new_total_energy = linearSpringInfoVecs.linear_spring_energy + 
+					areaTriangleInfoVecs.area_triangle_energy + 
+					bendingTriangleInfoVecs.bending_triangle_energy +
+					0.5*energy_rep;// +
+					//ljInfoVecs.lj_energy_M +  
+					// ljInfoVecs.lj_energy_LJ +
+						//generalParams.volume_energy;
+				//std::cout<<"new_total_energy = "<<new_total_energy<<std::endl;
+
+				energy_gradient = sqrt((new_total_energy - old_total_energy)*(new_total_energy - old_total_energy));
+				if (current_time >= Max_Runtime*0.25 && energy_gradient < energy_gradient_threshold){
+					end_of_relaxation = true;
+					break;
+				}
+			old_total_energy = new_total_energy;
+			current_time+=generalParams.dt;
+			// std::cout<<"STOPPED at the end of one time step in relaxation"<<std::endl;
+
 						//	 std::cout<<"IT'S NOT"<<std::endl;
-						if (translate_counter % translate_frequency == 0){
+						if (translate_counter % translate_frequency == 0 || end_of_relaxation == true){
 						//	std::cout<<"SIMULATIONs TRIGGER REPOSITIONING AND EDGESWAP?"<<std::endl;
 
 							newcenterX = 0.0;
@@ -1296,22 +1317,6 @@ void System::solveSystem() {
 
 						}
 						
- 						new_total_energy = linearSpringInfoVecs.linear_spring_energy + 
- 							areaTriangleInfoVecs.area_triangle_energy + 
- 							bendingTriangleInfoVecs.bending_triangle_energy +
- 							0.5*energy_rep;// +
- 							//ljInfoVecs.lj_energy_M +  
-							// ljInfoVecs.lj_energy_LJ +
-							 //generalParams.volume_energy;
- 						//std::cout<<"new_total_energy = "<<new_total_energy<<std::endl;
-
- 						energy_gradient = sqrt((new_total_energy - old_total_energy)*(new_total_energy - old_total_energy));
- 						if (current_time >= Max_Runtime*0.25 && energy_gradient < energy_gradient_threshold){
-							break;
-						}
- 					old_total_energy = new_total_energy;
- 					current_time+=generalParams.dt;
-					// std::cout<<"STOPPED at the end of one time step in relaxation"<<std::endl;
 
 					
 					if (generalParams.SCALE_TYPE != 3){
@@ -1377,7 +1382,7 @@ void System::solveSystem() {
 							}
 					}	
 
-					}
+				}
 					//std::cout<<"current_time (# of relaxation step) = "<<current_time<<std::endl;
 					if (EDGESWAP_ALGORITHM_TRIGGERED == false){
 						//EDGE_SWAP IS TRIGGERED HERE IF THE RELAXATION IN THE PREVIOUS SECTION DID NOT HIT THE THRESHOLD VALUE TO TRIGGER
